@@ -1,71 +1,55 @@
 # NexEstimate — Zillow Estimate Agent
 
-A production-grade Python agent with a React + TypeScript frontend that fetches the current Zillow Zestimate® for any US property address.
+Fetches the current Zillow Zestimate® for any US property address. Enter an address, get back the exact value Zillow shows — no scraping, no approximations.
 
-> **≥ 99% accuracy** — Returns the exact Zestimate currently displayed on Zillow.com, sourced directly from Zillow's property data.
-
-## Architecture
+## How it works
 
 ```
-React + TypeScript SPA ──▶ FastAPI (Python) ──▶ Zillow API (RapidAPI)
+React SPA  →  FastAPI (Python)  →  Zillow API via RapidAPI
 ```
 
-| Layer | Technology | Why |
-|---|---|---|
-| **Frontend** | React 19 + TypeScript + Vite | Industry-standard typed SPA with fast HMR |
-| **Backend** | FastAPI + Pydantic v2 | Async Python, auto-generated API docs, typed responses |
-| **HTTP Client** | httpx | Async-native, drop-in replacement for `requests` |
-| **Data Source** | private-zillow (RapidAPI) | Real-time Zillow property data with Zestimate |
-| **Deployment** | Vercel | Serverless Python function + static React build |
+The backend hits the `private-zillow` RapidAPI endpoint and returns structured property data including the Zestimate, rent estimate, and listing details. The frontend is just a clean interface on top of that.
 
-## Quick Start (Local)
+## Stack
 
-### Prerequisites
-- Python 3.11+
-- Node.js 18+
-- RapidAPI key for [private-zillow](https://rapidapi.com/apimaker/api/private-zillow)
+| Layer | Tech |
+|---|---|
+| Frontend | React 19 + TypeScript + Vite |
+| Backend | FastAPI + Pydantic v2 + httpx |
+| Data | private-zillow (RapidAPI) |
+| Deploy | Vercel (serverless Python + static) |
 
-### Setup
+## Local Setup
+
+**Prerequisites:** Python 3.11+, Node 18+, RapidAPI key for [private-zillow](https://rapidapi.com/apimaker/api/private-zillow)
 
 ```bash
-# Clone and install Python deps
 git clone https://github.com/YOUR_USERNAME/NexEstimate.git
 cd NexEstimate
 pip install -r requirements.txt
-
-# Configure API key
 cp .env.example .env
-# Edit .env with your RapidAPI key
+# add your RAPIDAPI_KEY to .env
 
-# Install frontend deps
-cd frontend
-npm install
-cd ..
+cd frontend && npm install && cd ..
 ```
-
-### Run locally
 
 ```bash
-# Terminal 1: Start the backend
+# Terminal 1
 uvicorn main:app --reload --port 8000
 
-# Terminal 2: Start the frontend
-cd frontend
-npm run dev
+# Terminal 2
+cd frontend && npm run dev
 ```
 
-- **Frontend**: http://localhost:5173
-- **API Docs**: http://localhost:8000/docs (Swagger UI)
-- **API Endpoint**: http://localhost:8000/api/estimate?address=328+26th+Avenue,+Seattle,+WA+98122
+- Frontend: http://localhost:5173
+- Swagger docs: http://localhost:8000/docs
+- Raw API: http://localhost:8000/api/estimate?address=328+26th+Avenue,+Seattle,+WA+98122
 
 ## Deploy to Vercel
 
-1. Push to GitHub
-2. Import the repo on [vercel.com](https://vercel.com)
-3. Add environment variable: `RAPIDAPI_KEY` = your key
-4. Deploy — Vercel handles everything via `vercel.json`
+Push to GitHub, import on Vercel, set `RAPIDAPI_KEY` as an environment variable. The `vercel.json` handles the rest.
 
-## API Response Example
+## Example Response
 
 ```json
 {
@@ -79,8 +63,7 @@ npm run dev
   "year_built": 1912,
   "home_type": "SINGLE_FAMILY",
   "price": 1199000,
-  "last_sold_price": 959000,
-  "image_url": "https://photos.zillowstatic.com/..."
+  "last_sold_price": 959000
 }
 ```
 
@@ -88,34 +71,31 @@ npm run dev
 
 ```
 NexEstimate/
-├── api/
-│   └── index.py           # FastAPI serverless function (Vercel)
-├── main.py                # FastAPI app (local development)
-├── vercel.json            # Vercel deployment config
-├── requirements.txt       # Python dependencies
-├── .env                   # API keys (gitignored)
-├── .gitignore
-├── README.md
-└── frontend/              # React + TypeScript SPA
-    ├── package.json
-    ├── tsconfig.json
-    ├── vite.config.ts     # Dev proxy to backend
+├── api/index.py        # FastAPI serverless function (Vercel)
+├── main.py             # FastAPI app for local dev
+├── vercel.json
+├── requirements.txt
+└── frontend/
     └── src/
-        ├── App.tsx        # Root component
-        ├── index.css      # Global styles
-        ├── types/         # TypeScript interfaces
-        ├── services/      # API client
-        ├── hooks/         # Custom hooks
-        └── components/    # UI components
+        ├── App.tsx
+        ├── types/
+        ├── services/
+        ├── hooks/
+        └── components/
 ```
 
-## Tech Decisions
+## Demo Limitations
 
-- **FastAPI over Flask**: Async-native, auto Swagger docs, Pydantic validation
-- **httpx over requests**: Async support required for FastAPI's async endpoints
-- **React + TypeScript over vanilla JS**: Typed components, better DX, interview signal
-- **Vite over CRA**: CRA is deprecated, Vite is 10-20x faster
-- **Vercel over Render**: Serverless = zero ops, free tier, GitHub integration
+This was built as a demonstration. It is intentionally missing things you'd want before shipping this for real:
+
+- No error logging or observability (no Sentry, no structured logs)
+- No rate limiting on the API endpoint
+- No authentication or API key protection
+- No security hardening (CORS is wide open, no input sanitization beyond length check)
+- No caching layer — every request hits RapidAPI
+- No test suite
+
+These are all solvable, just out of scope for a demo.
 
 ---
 
