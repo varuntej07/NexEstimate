@@ -71,6 +71,7 @@ Push to GitHub, import on Vercel, set `RAPIDAPI_KEY` as an environment variable.
 
 ```
 NexEstimate/
+├── api/core.py         # Shared business logic (used by both runtimes)
 ├── api/index.py        # FastAPI serverless function (Vercel)
 ├── main.py             # FastAPI app for local dev
 ├── vercel.json
@@ -84,18 +85,22 @@ NexEstimate/
         └── components/
 ```
 
-## Demo Limitations
+## Production Hardening
 
-This was built as a demonstration. It is intentionally missing things you'd want before shipping this for real:
+The backend includes:
 
-- No error logging or observability (no Sentry, no structured logs)
-- No rate limiting on the API endpoint
-- No authentication or API key protection
-- No security hardening (CORS is wide open, no input sanitization beyond length check)
-- No caching layer — every request hits RapidAPI
-- No test suite
+- **Rate limiting** — 15 requests per 10 minutes per IP (`slowapi`)
+- **Structured logging** — request latency, retry attempts, errors; address is hashed (never logged as plain text)
+- **Granular timeouts** — connect/read/write split to fit Vercel's 30s limit
+- **Input validation** — address must start with a street number, max 100 chars, no control characters
+- **CORS** — locked to deployed origin via `ALLOWED_ORIGIN` env var (wildcard in local dev)
+- **Error classification** — 401, 403, 429, 404, 5xx each get distinct messages
 
-These are all solvable, just out of scope for a demo.
+## Known Limitations
+
+- No authentication or API key protection on the endpoint
+- No caching - every request hits RapidAPI
+- Rate limiting is per-lambda-instance on Vercel (not a hard global cap - should use Redis/Upstash for that)
 
 ---
 

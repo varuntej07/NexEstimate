@@ -1,10 +1,10 @@
 # Workflow Orchestration
 
 ## 1. Plan Mode Default
-- Enter plan mode for ANY non-trivial task (3+ steps)
-- If something goes sideways, STOP and re-plan immediately
+- Enter plan mode for ANY non-trivial task (2+ steps) and have a bird's eye view of the changes you're about to make.
+- If something goes sideways, STOP. fetch latest documentation and re-plan immediately
 - Use plan mode for verification steps, not just building
-- Write detailed specs upfront to reduce ambiguity
+- Write detailed specs upfront or ask clarifying questions to reduce ambiguity
 
 ## 2. Subagent Strategy
 - Use subagents liberally to keep main context window clean
@@ -15,11 +15,11 @@
 ## 3. Self-Improvement Loop
 - After ANY correction and major bug: update `problems-faced.txt`
 - Write rules for yourself that prevent the same mistakes
-- Ruthlessly iterate on these lessons until mistake-free
+- Ruthlessly iterate on these lessons until mistake-free (this is the most important rule)
 - Review lessons at session start for relevant projects
 
 ## 4. Verification Before Done
-- Never mark a task complete without proving it works
+- Never mark a task complete without proving it works (this is the second most important rule)
 - Diff behavior between main and your changes when reviewing
 - Ask yourself: "Would a staff engineer approve this?"
 - Run tests, check logs, demonstrate correctness
@@ -31,8 +31,8 @@
 - Challenge your own work before presenting it
 
 ## 6. Autonomous Bug Fixing
-- When given a bug report: just fix it. Don't ask for permission
-- Point at logs, errors, failing tests — then resolve them
+- When given a bug report: Give the plan and get approval, then fix it.
+- Point at logs, errors, failing tests - then resolve them
 - Zero context switching required from the user
 - Go fix failing CI tests without being told how
 
@@ -48,14 +48,9 @@
 
 # Architecture Notes
 
-## Two-File Backend Pattern (main.py vs api/index.py)
+## Three-File Backend Pattern
 
-These files look identical but serve different deployment targets — do NOT merge them without user approval.
-
-| File | Purpose | Key Differences |
-|---|---|---|
-| `main.py` | Local dev (`uvicorn main:app`) | Persistent `httpx.AsyncClient` via `lifespan`; mounts React SPA from `frontend/dist` |
-| `api/index.py` | Vercel serverless (routed by `vercel.json`) | Per-request `async with httpx.AsyncClient`; no static file serving (Vercel handles that) |
-
-**Known issue:** Business logic (`_parse_property`, Pydantic models, the `/api/estimate` endpoint) is duplicated.
-Any change to the shared logic must be applied to **both files** until a shared module is extracted.
+- `api/core.py` — shared business logic. Config constants (`RAPIDAPI_KEY/HOST`, `ALLOWED_ORIGIN`, `RATE_LIMIT`, `TIMEOUTS`), input validation (`_ADDRESS_RE`, `_ADDRESS_MAX_LEN`), structured logging (`logger`, `_hash_addr`), Pydantic models (`ZestimateRange`, `PropertyEstimate`), `_fetch_with_retry`, `_parse_property`, and `get_estimate_handler(address, client)`. 
+**All logic changes go here once.**
+- `main.py` — local dev only. Owns the persistent `httpx.AsyncClient` lifespan and SPA static file serving. Delegates `/api/estimate` to `get_estimate_handler`.
+- `api/index.py` — Vercel serverless. Creates a fresh `httpx.AsyncClient` per invocation (no lifespan support). Delegates `/api/estimate` to `get_estimate_handler`. No static file serving (Vercel handles that).
