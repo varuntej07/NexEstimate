@@ -1,11 +1,11 @@
 import { useState, useCallback } from "react";
-import type { PropertyEstimate } from "../types/property";
+import type { PropertyEstimate, UiError } from "../types/property";
 import { fetchEstimate } from "../services/api";
 
 interface UseEstimateReturn {
   data: PropertyEstimate | null;
   loading: boolean;
-  error: string | null;
+  error: UiError | null;
   search: (address: string) => Promise<void>;
   reset: () => void;
 }
@@ -17,7 +17,7 @@ interface UseEstimateReturn {
 export function useEstimate(): UseEstimateReturn {
   const [data, setData] = useState<PropertyEstimate | null>(null);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<UiError | null>(null);
 
   const search = useCallback(async (address: string) => {
     setLoading(true);
@@ -28,7 +28,12 @@ export function useEstimate(): UseEstimateReturn {
       const result = await fetchEstimate(address);
       setData(result);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "An unexpected error occurred");
+      const uiError = (err as Error & { uiError?: UiError }).uiError ?? {
+        title: "Something went wrong",
+        message: err instanceof Error ? err.message : "An unexpected error occurred.",
+        retryable: true,
+      };
+      setError(uiError);
     } finally {
       setLoading(false);
     }

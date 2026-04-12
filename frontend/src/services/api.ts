@@ -1,17 +1,45 @@
-import type { PropertyEstimate, ApiError } from "../types/property";
+import type { PropertyEstimate, ApiError, UiError } from "../types/property";
 
 const API_BASE = "/api";
 
-// Fetch property estimate from the backend API. Throws an error with a user-friendly message on failure
+function classifyError(status: number, message: string): UiError {
+  if (status === 422) return { title: "Invalid address", message: "Please enter a valid US address starting with a street number and try again.", retryable: false };
+  if (status === 404) return { title: "Address not found", message, retryable: false };
+  if (status === 429) return { title: "Too many requests", message, retryable: true };
+  return { title: "Something went wrong", message, retryable: true };
+}
+
+// Fetch property estimate from the backend API.
 export async function fetchEstimate(address: string): Promise<PropertyEstimate> {
   const params = new URLSearchParams({ address });
-  const response = await fetch(`${API_BASE}/estimate?${params}`);
+
+  let response: Response;
+  try {
+    response = await fetch(`${API_BASE}/estimate?${params}`);
+  } catch {
+    const err = new Error("Could not reach the server. Check your connection.");
+    (err as Error & { uiError: UiError }).uiError = {
+      title: "Connection failed",
+      message: "Could not reach the server. Check your connection.",
+      retryable: true,
+    };
+    throw err;
+  }
 
   if (!response.ok) {
-    const body: ApiError = await response.json().catch(() => ({
-      detail: `Server error (${response.status})`,
-    }));
-    throw new Error(body.detail);
+    // slowapi returns { "error": "..." }, FastAPI returns { "detail": "..." } or { "detail": [...] }
+    const body: ApiError & { error?: string } = await response.json().catch(() => ({}));
+    const raw = body.detail ?? body.error;
+    const message =
+      typeof raw === "string"
+        ? raw
+        : Array.isArray(raw) && raw.length > 0
+          ? raw[0]?.msg ?? `Server error (${response.status})`
+          : `Server error (${response.status})`;
+    const uiError = classifyError(response.status, message);
+    const err = new Error(message);
+    (err as Error & { uiError: UiError }).uiError = uiError;
+    throw err;
   }
 
   return response.json();

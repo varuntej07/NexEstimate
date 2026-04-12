@@ -49,5 +49,14 @@ export interface PropertyEstimate {
 }
 
 export interface ApiError {
-  detail: string;
+  // FastAPI returns { "detail": "string" } or { "detail": [ { "msg": "..." } ] }
+  // slowapi returns { "error": "..." }
+  detail: string | Array<{ msg: string }> | null;
+  error?: string;
+}
+
+export interface UiError {
+  title: string;
+  message: string;
+  retryable: boolean;
 }

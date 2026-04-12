@@ -1,11 +1,12 @@
 import React from "react";
 
 interface ErrorDisplayProps {
+  title: string;
   message: string;
   onRetry?: () => void;
 }
 
-const ErrorDisplay: React.FC<ErrorDisplayProps> = ({ message, onRetry }) => {
+const ErrorDisplay: React.FC<ErrorDisplayProps> = ({ title, message, onRetry }) => {
   return (
     <div className="error-display" id="error-display">
       <div className="error-icon">
@@ -15,7 +16,7 @@ const ErrorDisplay: React.FC<ErrorDisplayProps> = ({ message, onRetry }) => {
           <line x1="12" y1="16" x2="12.01" y2="16" />
         </svg>
       </div>
-      <h3 className="error-title">Something went wrong</h3>
+      <h3 className="error-title">{title}</h3>
       <p className="error-message">{message}</p>
       {onRetry && (
         <button className="error-retry" onClick={onRetry}>

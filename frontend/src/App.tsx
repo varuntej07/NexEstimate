@@ -52,7 +52,11 @@ function App() {
           {loading && <LoadingSkeleton />}
 
           {error && (
-            <ErrorDisplay message={error} onRetry={handleRetry} />
+            <ErrorDisplay
+              title={error.title}
+              message={error.message}
+              onRetry={error.retryable ? handleRetry : undefined}
+            />
           )}
 
           {data && !loading && (
